@@ -18,109 +18,59 @@ function fromJSON(proto, json) {
   return Object.assign(Object.create(proto), obj);
 }
 
-class CssSelectorBuilder {
-  constructor() {
-    this.elements = [];
-    this.combinators = [];
-    this.isElementUsed = false;
-    this.isIdUsed = false;
-    this.isClassUsed = false;
-    this.isAttrUsed = false;
-    this.isPseudoClassUsed = false;
-    this.isPseudoElementUsed = false;
-  }
+const cssSelectorBuilder = {
+  selectors: '',
+  currentElement: null,
+  noDuplicateElement: [1, 2, 6],
 
-  validateSingleUsage(selectorType) {
-    if (selectorType) {
-      if (selectorType === 'element' && this.isElementUsed) {
-        throw new Error(
-          'Element, id, and pseudo-element should not occur more than one time inside the selector',
-        );
-      }
-      if (selectorType === 'id' && this.isIdUsed) {
-        throw new Error(
-          'Element, id, and pseudo-element should not occur more than one time inside the selector',
-        );
-      }
-      if (selectorType === 'class' && this.isClassUsed) {
-        throw new Error(
-          'Element, id, and pseudo-element should not occur more than one time inside the selector',
-        );
-      }
-      if (selectorType === 'attr' && this.isAttrUsed) {
-        throw new Error(
-          'Element, id, and pseudo-element should not occur more than one time inside the selector',
-        );
-      }
-      if (selectorType === 'pseudoClass' && this.isPseudoClassUsed) {
-        throw new Error(
-          'Element, id, and pseudo-element should not occur more than one time inside the selector',
-        );
-      }
-      if (selectorType === 'pseudoElement' && this.isPseudoElementUsed) {
-        throw new Error(
-          'Element, id, and pseudo-element should not occur more than one time inside the selector',
-        );
-      }
+  addSelector(value, el) {
+    this.checkOrder(el);
+    this.checkUnique(el);
+    const nextSelector = Object.create(cssSelectorBuilder);
+    nextSelector.selectors = `${this.selectors}${value}`;
+    nextSelector.currentElement = el;
+    return nextSelector;
+  },
+  checkOrder(el) {
+    if (this.currentElement > el) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element',
+      );
     }
-  }
-
+  },
+  checkUnique(el) {
+    if (this.noDuplicateElement.includes(el) && el === this.currentElement) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector',
+      );
+    }
+  },
   element(value) {
-    this.validateSingleUsage('element');
-    this.elements.push(value);
-    this.isElementUsed = true;
-    return this;
-  }
-
+    return this.addSelector(value, 1);
+  },
   id(value) {
-    this.validateSingleUsage('id');
-    this.elements.push(`#${value}`);
-    this.isIdUsed = true;
-    return this;
-  }
-
+    return this.addSelector(`#${value}`, 2);
+  },
   class(value) {
-    this.validateSingleUsage('class');
-    this.elements.push(`.${value}`);
-    this.isClassUsed = true;
-    return this;
-  }
-
+    return this.addSelector(`.${value}`, 3);
+  },
   attr(value) {
-    this.validateSingleUsage('attr');
-    this.elements.push(`[${value}]`);
-    this.isAttrUsed = true;
-    return this;
-  }
-
+    return this.addSelector(`[${value}]`, 4);
+  },
   pseudoClass(value) {
-    this.validateSingleUsage('pseudoClass');
-    this.elements.push(`:${value}`);
-    this.isPseudoClassUsed = true;
-    return this;
-  }
-
+    return this.addSelector(`:${value}`, 5);
+  },
   pseudoElement(value) {
-    this.validateSingleUsage('pseudoElement');
-    this.elements.push(`::${value}`);
-    this.isPseudoElementUsed = true;
-    return this;
-  }
-
-  combine(selector1, combinator, selector2) {
-    this.combinators.push(`${selector1}${combinator}${selector2}`);
-    return this;
-  }
-
+    return this.addSelector(`::${value}`, 6);
+  },
+  combine(selectorsGroup1, combinator, selectorsGroup2) {
+    return this.addSelector(
+      `${selectorsGroup1.selectors} ${combinator} ${selectorsGroup2.selectors}`,
+    );
+  },
   stringify() {
-    return `${this.elements.join('')}${this.combinators.join('')}`;
-  }
-}
-
-const cssSelectorBuilder = new CssSelectorBuilder();
-
-module.exports = {
-  cssSelectorBuilder,
+    return this.selectors;
+  },
 };
 
 module.exports = {
